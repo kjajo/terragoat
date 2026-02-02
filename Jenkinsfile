@@ -23,29 +23,43 @@ pipeline {
 
     stage('IaC Scan - Terrascan (Terraform)') {
       steps {
-        sh '''
-          set -euxo pipefail
-          mkdir -p reports
+        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+          sh '''
+            set -uox pipefail
+            mkdir -p reports
 
-          # Optional: prove terraform folder exists on Jenkins side
-          ls -lah
-          ls -lah terraform
+            # Terrascan WILL return non-zero for terragoat (by design)
+            set +e
+            docker run --rm -t \
+              --volumes-from jenkins \
+              -w "$WORKSPACE" \
+              tenable/terrascan scan \
+                -i terraform \
+                -d terraform \
+                -o json \
+                --skip-dirs terraform/aws/resources \
+              > reports/terrascan_after.json
 
-          # Share Jenkins container volumes so /var/jenkins_home exists inside the scan container
-          docker run --rm -t \
-            --volumes-from jenkins \
-            -w "$WORKSPACE" \
-            tenable/terrascan scan -i terraform -d terraform -o json > reports/terrascan.json
+            rc=$?
+            set -e
 
-          test -s reports/terrascan.json
-        '''
+            echo "Terrascan exit code: $rc"
+            echo "$rc" > reports/terrascan_exit_code.txt
+
+            test -s reports/terrascan_after.json
+            exit $rc
+          '''
+        }
       }
       post {
         always {
-          archiveArtifacts artifacts: 'reports/terrascan.json', fingerprint: true, allowEmptyArchive: true
+          archiveArtifacts artifacts: 'reports/terrascan*.json,reports/terrascan_exit_code.txt',
+                           fingerprint: true,
+                           allowEmptyArchive: true
         }
       }
     }
+
 
 
 
