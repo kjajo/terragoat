@@ -24,19 +24,24 @@ pipeline {
       steps {
         sh '''
           set -euxo pipefail
+          mkdir -p reports
 
-          # Baseline scan
-          docker run --rm -t \
-            --volumes-from jenkins \
-            -w "$WORKDIR" \
+          echo "Workspace content:"
+          ls -lah
+          echo "Terraform files:"
+          find . -maxdepth 3 -type f -name "*.tf" -print || true
+
+          docker run --rm \
             -v "$PWD:/iac" -w /iac \
-            tenable/terrascan scan -i terraform -d . -o json > reports/terrascan_after.json
+            tenable/terrascan scan -i terraform -d terraform -o json > reports/terrascan.json
 
-          ls -lah reports
-          test -s reports/terrascan_after.json
+          test -s reports/terrascan.json
         '''
+        archiveArtifacts artifacts: 'reports/terrascan.json', fingerprint: true
       }
-      post {
+    }
+
+    post {
         always {
           archiveArtifacts artifacts: 'reports/terrascan.json', fingerprint: true
         }
