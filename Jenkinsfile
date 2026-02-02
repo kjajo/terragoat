@@ -27,20 +27,26 @@ pipeline {
           set -euxo pipefail
           mkdir -p reports
 
-          echo "Workspace content:"
+          # Optional: prove terraform folder exists on Jenkins side
           ls -lah
-          echo "Terraform files:"
-          find . -maxdepth 3 -type f -name "*.tf" -print || true
+          ls -lah terraform
 
-          docker run --rm \
-            -v "$PWD:/iac" -w /iac \
+          # Share Jenkins container volumes so /var/jenkins_home exists inside the scan container
+          docker run --rm -t \
+            --volumes-from jenkins \
+            -w "$WORKSPACE" \
             tenable/terrascan scan -i terraform -d terraform -o json > reports/terrascan.json
 
           test -s reports/terrascan.json
         '''
-        archiveArtifacts artifacts: 'reports/terrascan.json', fingerprint: true
+      }
+      post {
+        always {
+          archiveArtifacts artifacts: 'reports/terrascan.json', fingerprint: true, allowEmptyArchive: true
+        }
       }
     }
+
 
 
 
