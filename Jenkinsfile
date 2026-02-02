@@ -25,13 +25,7 @@ pipeline {
       steps {
         sh '''
           set -euxo pipefail
-          mkdir -p reports
 
-          # Optional: prove terraform folder exists on Jenkins side
-          ls -lah
-          ls -lah terraform
-
-          # Share Jenkins container volumes so /var/jenkins_home exists inside the scan container
           docker run --rm -t \
             --volumes-from jenkins \
             -w "$WORKSPACE" \
