@@ -20,6 +20,7 @@ pipeline {
       }
     }
 
+
     stage('IaC Scan - Terrascan (Terraform)') {
       steps {
         sh '''
@@ -41,12 +42,8 @@ pipeline {
       }
     }
 
-    post {
-        always {
-          archiveArtifacts artifacts: 'reports/terrascan.json', fingerprint: true
-        }
-      }
-    }
+
+
   }
   post {
     always {
